@@ -83,6 +83,7 @@
 }
 
 .react-site .elementor-element-75eb25b {
+  --padding-top: clamp(72px, 8vw, 128px) !important;
   --padding-bottom: clamp(72px, 8vw, 128px) !important;
   padding-bottom: clamp(72px, 8vw, 128px) !important;
 }
