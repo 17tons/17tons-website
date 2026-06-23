@@ -30,6 +30,71 @@
   visibility: visible !important;
 }
 
+@media (min-width: 1025px) {
+  .react-site .elementor-location-header .elementor-widget-n-menu .e-n-menu {
+    position: relative;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-heading > .e-n-menu-item {
+    position: relative;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-heading > .e-n-menu-item > .e-n-menu-content {
+    background: #fff;
+    border: 1px solid #111;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.12);
+    left: 50% !important;
+    max-width: min(320px, calc(100vw - 48px));
+    min-width: 240px;
+    overflow: hidden;
+    right: auto !important;
+    top: calc(100% + 8px) !important;
+    transform: translateX(-50%);
+    width: max-content !important;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-heading > .e-n-menu-item > .e-n-menu-content::before {
+    background: #fff;
+    border-left: 1px solid #111;
+    border-top: 1px solid #111;
+    content: "";
+    height: 12px;
+    left: 50%;
+    position: absolute;
+    top: -7px;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-heading > .e-n-menu-item > .e-n-menu-content > .e-con,
+  .react-site .elementor-location-header .e-n-menu-heading > .e-n-menu-item > .e-n-menu-content > .e-active {
+    background: #fff !important;
+    max-width: none !important;
+    min-width: 100%;
+    padding: 12px 0 !important;
+    width: 100% !important;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-content .elementor-heading-title {
+    line-height: 1.2 !important;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-content .elementor-heading-title a {
+    color: #111 !important;
+    display: block;
+    font-size: 18px !important;
+    font-weight: 400 !important;
+    padding: 11px 18px;
+    text-decoration: none !important;
+    white-space: nowrap;
+  }
+
+  .react-site .elementor-location-header .e-n-menu-content .elementor-heading-title a:hover,
+  .react-site .elementor-location-header .e-n-menu-content .elementor-heading-title a:focus-visible {
+    background: #f5f1e8;
+  }
+}
+
 @media (max-width: 1024px) {
   .react-site .e-n-menu.react-mobile-menu-open > .e-n-menu-wrapper {
     background: #faf5ed;
@@ -40,7 +105,7 @@
     position: absolute;
     right: 0;
     top: 100%;
-    width: min(420px, 100vw);
+    width: min(420px, calc(100vw - 32px)) !important;
     z-index: 9998;
   }
 
@@ -49,10 +114,59 @@
     display: block !important;
   }
 
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-heading {
+    width: 100%;
+  }
+
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-heading > .e-n-menu-item {
+    width: 100%;
+  }
+
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active {
+    left: 0 !important;
+    max-width: min(420px, calc(100vw - 32px)) !important;
+    right: 0 !important;
+    width: min(420px, calc(100vw - 32px)) !important;
+  }
+
+  .react-site #menubar-115 .e-n-menu-content.e-active,
+  .react-site #menubar-493 .e-n-menu-content.e-active {
+    left: 0 !important;
+    max-width: min(420px, calc(100vw - 32px)) !important;
+    right: 0 !important;
+    width: min(420px, calc(100vw - 32px)) !important;
+  }
+
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active > .e-con,
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active > .e-active,
+  .react-site #menubar-115 .e-n-menu-content.e-active > .e-con,
+  .react-site #menubar-115 .e-n-menu-content.e-active > .e-active,
+  .react-site #menubar-493 .e-n-menu-content.e-active > .e-con,
+  .react-site #menubar-493 .e-n-menu-content.e-active > .e-active {
+    max-width: none !important;
+    width: min(420px, calc(100vw - 32px)) !important;
+  }
+
   .react-site .e-n-menu-wrapper:has(.react-menu-item-open) {
     height: auto !important;
     min-height: 46px;
     overflow: visible !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .react-site .e-n-menu.react-mobile-menu-open > .e-n-menu-wrapper,
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active,
+  .react-site #menubar-115 .e-n-menu-content.e-active,
+  .react-site #menubar-493 .e-n-menu-content.e-active,
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active > .e-con,
+  .react-site .e-n-menu.react-mobile-menu-open .e-n-menu-content.e-active > .e-active,
+  .react-site #menubar-115 .e-n-menu-content.e-active > .e-con,
+  .react-site #menubar-115 .e-n-menu-content.e-active > .e-active,
+  .react-site #menubar-493 .e-n-menu-content.e-active > .e-con,
+  .react-site #menubar-493 .e-n-menu-content.e-active > .e-active {
+    max-width: calc(100vw - 56px) !important;
+    width: calc(100vw - 56px) !important;
   }
 }
 
