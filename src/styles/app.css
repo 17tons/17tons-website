@@ -88,16 +88,27 @@
 }
 
 .react-site .elementor-element-a0848df {
-  margin-top: 0 !important;
-  padding-top: clamp(36px, 4vw, 56px) !important;
+  margin-top: clamp(-130px, -9.45vw, -72px) !important;
+  padding-top: 80px !important;
 }
 
 .react-site .elementor-element-d04e497 > .elementor-element.elementor-element-f5625f1 > .elementor-widget-container {
-  margin: 0 !important;
+  margin: -22% 9% 0% 0.5% !important;
 }
 
 .react-site .elementor-element-d2e7bba {
-  margin-top: 0 !important;
+  margin-top: -25px !important;
+}
+
+@media (max-width: 990px) {
+  .react-site .elementor-element-a0848df {
+    margin-top: -72px !important;
+    padding-top: 80px !important;
+  }
+
+  .react-site .elementor-element-d04e497 > .elementor-element.elementor-element-f5625f1 > .elementor-widget-container {
+    margin: -60px auto 0% auto !important;
+  }
 }
 
 @media (max-width: 1024px) {
