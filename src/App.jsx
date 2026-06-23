@@ -149,20 +149,22 @@ function initMenus() {
       const onToggleClick = (event) => {
         event.preventDefault();
         const isOpen = menu.classList.toggle("react-mobile-menu-open");
+        const item = wrapper.querySelector(".e-n-menu-item");
+
+        if (item) {
+          if (isOpen) {
+            openMenuItem(item);
+          } else {
+            closeMenuItem(item);
+          }
+        }
+
         toggle.setAttribute("aria-expanded", String(isOpen));
       };
 
       toggle.addEventListener("click", onToggleClick);
       cleanups.push(() => toggle.removeEventListener("click", onToggleClick));
     }
-
-    const toggleItem = (item) => {
-      if (item.classList.contains("react-menu-item-open")) {
-        closeMenuItem(item);
-      } else {
-        openMenuItem(item);
-      }
-    };
 
     const onDelegatedClick = (event) => {
       if (!window.matchMedia("(max-width: 1024px)").matches) return;
@@ -174,7 +176,17 @@ function initMenus() {
       if (!item?.querySelector(".e-n-menu-content")) return;
 
       event.preventDefault();
-      toggleItem(item);
+      const isOpen = item.classList.contains("react-menu-item-open");
+
+      if (isOpen) {
+        closeMenuItem(item);
+        menu.classList.remove("react-mobile-menu-open");
+        toggle?.setAttribute("aria-expanded", "false");
+      } else {
+        menu.classList.add("react-mobile-menu-open");
+        openMenuItem(item);
+        toggle?.setAttribute("aria-expanded", "true");
+      }
     };
 
     menu.addEventListener("click", onDelegatedClick);
@@ -215,6 +227,11 @@ function initMenus() {
 function openMenuItem(item) {
   const content = item.querySelector(".e-n-menu-content");
   const panel = content?.firstElementChild;
+  const menu = item.closest(".e-n-menu");
+
+  menu?.querySelectorAll(".e-n-menu-item.react-menu-item-open").forEach((openItem) => {
+    if (openItem !== item) closeMenuItem(openItem);
+  });
 
   item.classList.add("react-menu-item-open");
   content?.classList.add("e-active");
