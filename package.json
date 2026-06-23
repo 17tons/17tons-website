@@ -1,0 +1,19 @@
+{
+  "name": "17tons-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && node scripts/sanitize-build-urls.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "snapshot": "node scripts/snapshot-live-site.mjs"
+  },
+  "devDependencies": {
+    "vite": "8.0.16"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}
