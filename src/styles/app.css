@@ -82,6 +82,11 @@
   }
 }
 
+.react-site .elementor-element-75eb25b {
+  --padding-bottom: clamp(72px, 8vw, 128px) !important;
+  padding-bottom: clamp(72px, 8vw, 128px) !important;
+}
+
 .react-site .elementor-element-a0848df {
   margin-top: 0 !important;
   padding-top: clamp(36px, 4vw, 56px) !important;
