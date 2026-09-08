@@ -1,112 +1,130 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { pages } from "./generated/pages.js";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { localizePage, updateMetadata } from "./i18n/index.js";
+import { LocaleProvider, useI18n } from "./i18n/LocaleContext.jsx";
+import { preferredLocale, resolveRoute, storageKey } from "./i18n/routing.js";
 
-const knownPaths = new Map();
-
-for (const page of pages) {
-  knownPaths.set(normalizePath(page.path), page);
-  for (const alias of page.aliases ?? []) {
-    knownPaths.set(normalizePath(alias), page);
-  }
-}
-
-function normalizePath(pathname) {
-  if (!pathname || pathname === "/index.html") return "/";
-  const withoutHash = pathname.split("#")[0].split("?")[0];
-  if (withoutHash === "") return "/";
-  return withoutHash.endsWith("/") ? withoutHash : `${withoutHash}/`;
-}
-
-function routeForHref(rawHref) {
-  if (!rawHref || rawHref.startsWith("#")) return null;
-
-  let url;
+function getPreference() {
   try {
-    url = new URL(rawHref, window.location.origin);
+    return preferredLocale(window.localStorage, navigator.languages);
   } catch {
-    return null;
-  }
-
-  const path = normalizePath(url.pathname);
-  if (url.origin === window.location.origin && knownPaths.has(path)) return path;
-
-  return null;
-}
-
-function isContactHref(rawHref) {
-  if (!rawHref) return false;
-
-  try {
-    const url = new URL(rawHref, window.location.origin);
-    return normalizePath(url.pathname) === "/contact-us/";
-  } catch {
-    return rawHref.includes("/contact-us/");
+    return preferredLocale(null, navigator.languages);
   }
 }
 
 export default function App() {
-  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const [location, setLocation] = useState(() => window.location.href);
   const [isContactOpen, setContactOpen] = useState(false);
-  const page = useMemo(() => knownPaths.get(path) ?? knownPaths.get("/"), [path]);
+  const url = useMemo(() => new URL(location), [location]);
+  const { page, locale, path } = useMemo(() => resolveRoute(url.pathname, getPreference()), [url]);
+  const html = useMemo(
+    () => page ? localizePage(page, locale, url.origin, `${url.search}${url.hash}`) : "",
+    [page, locale, url.origin, url.search, url.hash],
+  );
+  const pageMarkup = useMemo(() => ({ __html: html }), [html]);
 
   useEffect(() => {
-    const onPopState = () => setPath(normalizePath(window.location.pathname));
+    const onPopState = () => {
+      setContactOpen(false);
+      setLocation(window.location.href);
+    };
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    window.addEventListener("hashchange", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("hashchange", onPopState);
+    };
   }, []);
 
   useEffect(() => {
-    document.title = page.title;
-    document.documentElement.lang = "en";
-    document.body.className = `${page.bodyClass} react-site`;
+    updateMetadata(page, locale, url.origin);
+    document.body.className = `${page?.bodyClass ?? ""} react-site`;
     document.body.dataset.cmplz = "1";
-  }, [page]);
+    if (url.pathname !== path) {
+      window.history.replaceState({}, "", `${path}${url.search}${url.hash}`);
+    }
+    try {
+      window.localStorage.setItem(storageKey, locale);
+    } catch {
+      // An explicit locale in the URL does not depend on storage.
+    }
+  }, [page, locale, path, url]);
 
   useEffect(() => {
     initLogoMarquees();
     return initMenus();
-  }, [page]);
+  }, [html]);
+
+  useEffect(() => {
+    if (url.hash) {
+      let id;
+      try {
+        id = decodeURIComponent(url.hash.slice(1));
+      } catch {
+        return;
+      }
+      document.getElementById(id)?.scrollIntoView();
+    }
+  }, [html, url.hash]);
 
   function navigate(nextPath) {
-    const normalized = normalizePath(nextPath);
-    if (normalized === path) return;
-    window.history.pushState({}, "", normalized);
-    setPath(normalized);
-    window.scrollTo(0, 0);
+    const next = new URL(nextPath, window.location.origin);
+    dismissMenus();
+    if (next.href === window.location.href) return;
+    window.history.pushState({}, "", next.href);
+    setContactOpen(false);
+    setLocation(next.href);
+    if (!next.hash) window.scrollTo(0, 0);
   }
 
   function handleClick(event) {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
     }
 
     const anchor = event.target.closest?.("a[href]");
-    if (!anchor) return;
+    if (!anchor || anchor.hasAttribute("download") || (anchor.target && anchor.target !== "_self")) return;
 
     const href = anchor.getAttribute("href");
-    if (isContactHref(href)) {
+    if (!href || href.startsWith("#")) return;
+    const target = new URL(href, window.location.origin);
+    if (target.origin !== window.location.origin) return;
+    const route = resolveRoute(target.pathname, locale);
+    if (route.basePath === "/contact-us/") {
       event.preventDefault();
+      dismissMenus();
       setContactOpen(true);
       return;
     }
 
-    const route = routeForHref(href);
-    if (route) {
+    if (route.page) {
       event.preventDefault();
-      navigate(route);
+      navigate(`${route.path}${target.search}${target.hash}`);
     }
   }
 
   return (
-    <>
-      <div
-        className="react-page"
-        onClick={handleClick}
-        dangerouslySetInnerHTML={{ __html: page.html }}
-      />
+    <LocaleProvider locale={locale}>
+      {page ? (
+        <div
+          key={`${page.slug}-${locale}-${url.search}-${url.hash}`}
+          className="react-page"
+          onClick={handleClick}
+          dangerouslySetInnerHTML={pageMarkup}
+        />
+      ) : <NotFound />}
       {isContactOpen ? <ContactModal onClose={() => setContactOpen(false)} /> : null}
-    </>
+    </LocaleProvider>
   );
+}
+
+function NotFound() {
+  const { locale, copy } = useI18n();
+  return <main className="not-found">
+    <p>404</p>
+    <h1>{copy.notFoundTitle}</h1>
+    <p>{copy.notFoundDescription}</p>
+    <a href={`/${locale}/`}>{copy.backHome}</a>
+  </main>;
 }
 
 function initLogoMarquees() {
@@ -167,8 +185,6 @@ function initMenus() {
     }
 
     const onDelegatedClick = (event) => {
-      if (!window.matchMedia("(max-width: 1024px)").matches) return;
-
       const title = event.target.closest?.(".e-n-menu-title");
       if (!title || !menu.contains(title)) return;
 
@@ -176,6 +192,10 @@ function initMenus() {
       if (!item?.querySelector(".e-n-menu-content")) return;
 
       event.preventDefault();
+      if (!window.matchMedia("(max-width: 1024px)").matches) {
+        openMenuItem(item);
+        return;
+      }
       const isOpen = item.classList.contains("react-menu-item-open");
 
       if (isOpen) {
@@ -192,6 +212,34 @@ function initMenus() {
     menu.addEventListener("click", onDelegatedClick);
     cleanups.push(() => menu.removeEventListener("click", onDelegatedClick));
 
+    const onEscape = (event) => {
+      if (event.key !== "Escape") return;
+      const item = menu.querySelector(".react-menu-item-open");
+      if (!item) return;
+      item.querySelector(".site-mobile-menu-trigger, .e-n-menu-dropdown-icon")?.focus();
+      closeMenuItem(item);
+      menu.classList.remove("react-mobile-menu-open");
+      toggle?.setAttribute("aria-expanded", "false");
+    };
+    menu.addEventListener("keydown", onEscape);
+    cleanups.push(() => menu.removeEventListener("keydown", onEscape));
+
+    const summaries = [...menu.querySelectorAll("summary")];
+    const onAccordionKeyDown = (event) => {
+      const index = summaries.indexOf(event.target.closest("summary"));
+      if (index < 0) return;
+      let next;
+      if (event.key === "ArrowDown") next = (index + 1) % summaries.length;
+      if (event.key === "ArrowUp") next = (index - 1 + summaries.length) % summaries.length;
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = summaries.length - 1;
+      if (next === undefined) return;
+      event.preventDefault();
+      summaries[next].focus();
+    };
+    menu.addEventListener("keydown", onAccordionKeyDown);
+    cleanups.push(() => menu.removeEventListener("keydown", onAccordionKeyDown));
+
     menu.querySelectorAll(".e-n-menu-item").forEach((item) => {
       const title = item.querySelector(".e-n-menu-title");
       const content = item.querySelector(".e-n-menu-content");
@@ -203,18 +251,23 @@ function initMenus() {
         }
       };
       const close = () => {
-        if (!window.matchMedia("(max-width: 1024px)").matches) {
+        if (!window.matchMedia("(max-width: 1024px)").matches && !item.contains(document.activeElement)) {
           closeMenuItem(item);
         }
+      };
+      const onFocusOut = (event) => {
+        if (!item.contains(event.relatedTarget) && !item.matches(":hover")) closeMenuItem(item);
       };
 
       item.addEventListener("mouseenter", open);
       item.addEventListener("mouseleave", close);
       title.addEventListener("focusin", open);
+      item.addEventListener("focusout", onFocusOut);
       cleanups.push(() => {
         item.removeEventListener("mouseenter", open);
         item.removeEventListener("mouseleave", close);
         title.removeEventListener("focusin", open);
+        item.removeEventListener("focusout", onFocusOut);
       });
     });
   });
@@ -222,6 +275,14 @@ function initMenus() {
   return () => {
     for (const cleanup of cleanups) cleanup();
   };
+}
+
+function dismissMenus() {
+  document.querySelectorAll(".e-n-menu").forEach((menu) => {
+    menu.querySelectorAll(".react-menu-item-open").forEach(closeMenuItem);
+    menu.classList.remove("react-mobile-menu-open");
+    menu.querySelector(".e-n-menu-toggle")?.setAttribute("aria-expanded", "false");
+  });
 }
 
 function openMenuItem(item) {
@@ -237,6 +298,7 @@ function openMenuItem(item) {
   content?.classList.add("e-active");
   panel?.classList.add("e-active", "animated", "fadeIn");
   item.querySelector(".e-n-menu-dropdown-icon")?.setAttribute("aria-expanded", "true");
+  item.querySelector(".site-mobile-menu-trigger")?.setAttribute("aria-expanded", "true");
 }
 
 function closeMenuItem(item) {
@@ -247,33 +309,57 @@ function closeMenuItem(item) {
   content?.classList.remove("e-active");
   panel?.classList.remove("e-active", "animated", "fadeIn");
   item.querySelector(".e-n-menu-dropdown-icon")?.setAttribute("aria-expanded", "false");
+  item.querySelector(".site-mobile-menu-trigger")?.setAttribute("aria-expanded", "false");
 }
 
 function ContactModal({ onClose }) {
+  const { copy } = useI18n();
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const panel = panelRef.current;
+    panel.querySelector("input")?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+      if (event.key !== "Tab") return;
+      const focusable = [...panel.querySelectorAll("button, input, textarea, a[href]")];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    panel.addEventListener("keydown", onKeyDown);
+    return () => {
+      panel.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
   return (
     <div className="contact-backdrop" role="dialog" aria-modal="true" aria-labelledby="contact-title">
-      <div className="contact-panel">
-        <button className="contact-close" type="button" aria-label="Close contact form" onClick={onClose}>
+      <div className="contact-panel" ref={panelRef}>
+        <button className="contact-close" type="button" aria-label={copy.contactClose} onClick={onClose}>
           &times;
         </button>
         <div className="contact-copy">
-          <h2 id="contact-title">Contact us</h2>
-          <p>
-            Whether you are looking for a new professional challenge, a technology partner,
-            or a solution to monitor your environmental project, tell us in a few lines
-            who you are and what you need-the 17tons team will get back to you as soon
-            as possible.
-          </p>
+          <h2 id="contact-title">{copy.contactTitle}</h2>
+          <p>{copy.contactDescription}</p>
         </div>
         <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
-          <input type="text" placeholder="Name" aria-label="Name" />
-          <input type="email" placeholder="E-mail" aria-label="E-mail" required />
-          <textarea rows="5" placeholder="Message" aria-label="Message" />
+          <input type="text" placeholder={copy.name} aria-label={copy.name} autoComplete="name" />
+          <input type="email" placeholder={copy.email} aria-label={copy.email} autoComplete="email" required />
+          <textarea rows="5" placeholder={copy.message} aria-label={copy.message} />
           <label className="contact-acceptance">
             <input type="checkbox" required />
-            <span>I confirm that I have read, consent and agree to the Privacy Policy</span>
+            <span>{copy.privacyConsent}{" "}<a href="/live-assets/wp-content/uploads/2024/12/Policy-privacy-sito-17tons.pdf" target="_blank" rel="noreferrer">{copy.privacyPolicy}</a></span>
           </label>
-          <button type="submit">Send Your Message</button>
+          <button type="submit">{copy.send}</button>
         </form>
       </div>
     </div>
