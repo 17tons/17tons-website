@@ -1,0 +1,18 @@
+export default {
+  "Palermo (Italia)": "Palermo (Italy)",
+  "Via Catania, 14 – Palermo (Italia)": "Via Catania, 14 – Palermo (Italy)",
+  "p.iva IT06997850828": "VAT no. IT06997850828",
+  "Loghi Coesione Italia": "Coesione Italia logos",
+  "Monitoraggio Multi-dimensione": "Multi-dimensional monitoring",
+  "Tracciabilità Completa": "Full traceability",
+  "KPI chiari e dati pronti all’uso": "Clear KPIs and ready-to-use data",
+  "Compliance semplificata": "Simplified compliance",
+  "Monitoraggio Icon": "Monitoring icon",
+  "Efficienza Icon": "Efficiency icon",
+  "Certificazioni Icon": "Certifications icon",
+  "Partner Icon": "Partner icon",
+  "Afforestazione e Riforestazione": "Afforestation and reforestation",
+  "Progetti Land-based su misura": "Custom land-based projects",
+  "Colosseo": "Colosseum",
+  "Piramide Giza": "Pyramid of Giza",
+};
