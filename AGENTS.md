@@ -21,6 +21,8 @@
 - The contact dialog has no message-delivery backend. Do not describe opening or submitting this form as confirmed message delivery.
 - `vercel.json` rewrites all routes to `/index.html` so direct deep links work on Vercel.
 - Vercel project: `sebastiano-6026s-projects/17tons-website`.
+- This website deploys `main` to Vercel Production at `https://17tons-website.vercel.app/`; feature branches create separate, authenticated Preview deployments. A successful Preview does not update the public domain. Publish through a pull request into `main` only when the public deployment is authorized.
+- Vercel must be able to associate the commit author with the connected GitHub account. Verify the deployment result separately from push success, and keep any author-email configuration scoped to this repository.
 
 ## Verification
 - Run `npm run build` after changes.
