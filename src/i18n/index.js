@@ -1,6 +1,7 @@
 import en from "./locales/en.js";
 import it from "./locales/it.js";
 import { messages } from "./messages.js";
+import { elementOverrides } from "./overrides.js";
 import { locales, localeNames, localizedPath, localizeHref } from "./routing.js";
 
 export const catalogs = { en, it };
@@ -18,8 +19,21 @@ export function localizePage(page, locale, origin, suffix = "") {
   while (walker.nextNode()) {
     const node = walker.currentNode;
     if (node.parentElement.closest("script, style, svg")) continue;
-    if (!normalizeMessage(node.textContent)) continue;
-    node.textContent = node.textContent.replace(/\S[\s\S]*\S|\S/, () => translate(node.textContent, locale));
+    const source = normalizeMessage(node.textContent);
+    if (!source) continue;
+    const elementId = node.parentElement.closest("[data-id]")?.dataset.id;
+    const scoped = elementOverrides[locale]?.[elementId]?.[source];
+    node.textContent = node.textContent.replace(/\S[\s\S]*\S|\S/, () => scoped ?? translate(node.textContent, locale));
+  }
+
+  // The live site serves the reCAPTCHA policy links from Complianz; the snapshot captures them as "#".
+  const policyLinks = {
+    "Google Privacy Policy": "https://policies.google.com/privacy",
+    "Google Terms of Service": "https://policies.google.com/terms",
+  };
+  for (const anchor of doc.querySelectorAll('a[title="Google Privacy Policy"], a[title="Google Terms of Service"]')) {
+    anchor.href = policyLinks[anchor.getAttribute("title")];
+    anchor.rel = "noopener noreferrer";
   }
 
   for (const el of doc.querySelectorAll(translatableAttributes.map((attr) => `[${attr}]`).join(","))) {
@@ -31,7 +45,10 @@ export function localizePage(page, locale, origin, suffix = "") {
   }
 
   for (const anchor of doc.querySelectorAll("a[href]")) {
-    anchor.setAttribute("href", localizeHref(anchor.getAttribute("href"), locale, origin));
+    const href = localizeHref(anchor.getAttribute("href"), locale, origin);
+    anchor.setAttribute("href", href);
+    // The contact dialog replaces the live contact page, so its triggers must stay in this tab.
+    if (/\/contact-us\/$/.test(href.split(/[?#]/)[0])) anchor.removeAttribute("target");
   }
 
   for (const anchor of doc.querySelectorAll("a.elementor-social-icon-linkedin")) {

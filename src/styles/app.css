@@ -548,14 +548,36 @@
 }
 
 .contact-form button[type="submit"] {
-  background: #111;
-  border: 1px solid #111;
-  color: #fff;
+  background: #cdffc2;
+  border: 1px solid #cdffc2;
+  color: #186067;
   cursor: pointer;
+  font-size: 13px;
   font-weight: 600;
-  min-height: 48px;
-  padding: 13px 18px;
+  justify-self: start;
+  letter-spacing: 0.04em;
+  min-height: 40px;
+  padding: 10px 22px;
   text-transform: uppercase;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.contact-form button[type="submit"]:hover,
+.contact-form button[type="submit"]:focus-visible {
+  background: #186067;
+  border-color: #186067;
+  color: #cdffc2;
+}
+
+.contact-recaptcha {
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 2px 0 0;
+}
+
+.contact-recaptcha a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .contact-label {

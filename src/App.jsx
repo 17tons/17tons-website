@@ -357,9 +357,15 @@ function ContactModal({ onClose }) {
           <textarea rows="5" placeholder={copy.message} aria-label={copy.message} />
           <label className="contact-acceptance">
             <input type="checkbox" required />
-            <span>{copy.privacyConsent}{" "}<a href="/live-assets/wp-content/uploads/2024/12/Policy-privacy-sito-17tons.pdf" target="_blank" rel="noreferrer">{copy.privacyPolicy}</a></span>
+            <span>{copy.privacyConsent}<a href="/live-assets/wp-content/uploads/2024/12/Policy-privacy-sito-17tons.pdf" target="_blank" rel="noreferrer">{copy.privacyPolicy}</a></span>
           </label>
           <button type="submit">{copy.send}</button>
+          <p className="contact-recaptcha">
+            {copy.recaptchaNotice}{" "}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">{copy.recaptchaPrivacy}</a>
+            {" "}{copy.recaptchaConjunction}{" "}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">{copy.recaptchaTerms}</a>.
+          </p>
         </form>
       </div>
     </div>
