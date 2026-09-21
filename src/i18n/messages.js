@@ -8,9 +8,16 @@ export const messages = {
     name: "Name",
     email: "E-mail",
     message: "Message",
-    privacyConsent: "I confirm that I have read and agree to the",
+    // The link follows the label directly, so the separating space belongs to the translation:
+    // Italian elides it ("l’informativa"), English needs it.
+    privacyConsent: "I confirm that I have read and agree to the ",
     privacyPolicy: "Privacy Policy",
     send: "Send Your Message",
+    // The same notice the footer already carries, worded identically so the two agree.
+    recaptchaNotice: "This site is protected by reCAPTCHA and Google:",
+    recaptchaPrivacy: "privacy policy",
+    recaptchaConjunction: "and",
+    recaptchaTerms: "terms of service",
     notFoundTitle: "Page not found",
     notFoundDescription: "This page does not exist. Explore our solutions from the homepage.",
     backHome: "Back to home",
@@ -41,17 +48,23 @@ export const messages = {
     name: "Nome",
     email: "E-mail",
     message: "Messaggio",
-    privacyConsent: "Confermo di aver letto e di accettare l’",
+    privacyConsent: "Confermo di aver letto e di accettare l’", // no trailing space: the apostrophe elides it
     privacyPolicy: "informativa sulla privacy",
     send: "Invia il messaggio",
+    // The same notice the footer already carries, worded identically so the two agree.
+    recaptchaNotice: "Questo sito è protetto da reCAPTCHA e si applicano le norme di Google:",
+    recaptchaPrivacy: "informativa sulla privacy",
+    recaptchaConjunction: "e",
+    recaptchaTerms: "termini di servizio",
     notFoundTitle: "Pagina non trovata",
     notFoundDescription: "Questa pagina non esiste. Scopri le nostre soluzioni dalla pagina iniziale.",
     backHome: "Torna alla home",
     titles: {
-      home: "17tons • il valore, dimostrato",
+      // The brand claim is not translated, so the tab title matches the English one.
+      home: "17tons • proof of value",
       biochar: "Il tuo progetto biochar, verificabile in ogni dettaglio • 17tons",
       arr: "Il tuo progetto di riforestazione, verificabile in ogni dettaglio • 17tons",
-      landBased: "Il tuo progetto sul territorio, su misura e verificabile in ogni dettaglio • 17tons",
+      landBased: "Il tuo progetto land-based, su misura e verificabile in ogni dettaglio • 17tons",
       philosophy: "Filosofia • 17tons",
       partners: "Partner • 17tons",
     },
@@ -59,7 +72,7 @@ export const messages = {
       home: "17tons quantifica la rimozione del carbonio e i co-benefici ambientali. Scopri Metatons, la piattaforma digitale di monitoraggio, rendicontazione e verifica.",
       biochar: "Gestisci il tuo progetto biochar con Metatons: tracciabilità della filiera, LCA dinamica, co-benefici ambientali e report pronti per la certificazione.",
       arr: "Monitora afforestazione, riforestazione e rivegetazione con Metatons: dati satellitari, sensori IoT e rilievi sul campo in un’unica piattaforma.",
-      landBased: "Crea un sistema di monitoraggio su misura per il tuo progetto sul territorio. Misura salute del suolo, biomassa, biodiversità e clima con Metatons.",
+      landBased: "Crea un sistema di monitoraggio su misura per il tuo progetto land-based. Misura salute del suolo, biomassa, biodiversità e clima con Metatons.",
       philosophy: "Scopri la filosofia di 17tons: rigenerare il capitale naturale e rendere misurabili e verificabili la rimozione del carbonio e i co-benefici ambientali.",
       partners: "Conosci l’ecosistema di 17tons: università, enti di ricerca, imprese e comunità che collaborano per un futuro a emissioni nette zero.",
     },

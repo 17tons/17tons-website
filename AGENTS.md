@@ -17,6 +17,8 @@
 - `src/App.jsx` handles SPA routing for canonical paths and short aliases.
 - `src/i18n/routing.js` resolves `/en/` and `/it/` routes, legacy aliases and unknown pages. Explicit URL language takes precedence over stored and browser preferences; preserve query strings and fragments during locale changes.
 - React UI copy and page metadata live in `src/i18n/messages.js`; React components consume them through `useI18n()` in `LocaleContext.jsx`. Snapshot text and accessibility attributes are localized before rendering in `src/i18n/index.js`.
+- The catalogue is keyed by source text, so a string the snapshot shares across two elements cannot carry two translations. `src/i18n/overrides.js` maps per-widget overrides by Elementor `data-id`, resolved before the catalogue; add an entry only for a real collision and keep the catalogue value for the other element.
+- Localization also repairs snapshot link defects: the reCAPTCHA policy links captured as `#` are restored to the Google URLs, and `target` is removed from contact-page links so every trigger opens the in-app dialog instead of a new tab.
 - Keep the `dangerouslySetInnerHTML` value memoized with its source HTML. Unrelated state changes, especially the contact dialog, must not replace the snapshot DOM and discard menu listeners or initialized marquees.
 - The contact dialog has no message-delivery backend. Do not describe opening or submitting this form as confirmed message delivery.
 - `vercel.json` rewrites all routes to `/index.html` so direct deep links work on Vercel.
