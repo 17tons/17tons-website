@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { prepareRecaptcha, requestRecaptchaToken } from "./contact/recaptcha.js";
 import { localizePage, updateMetadata } from "./i18n/index.js";
 import { LocaleProvider, useI18n } from "./i18n/LocaleContext.jsx";
 import { preferredLocale, resolveRoute, storageKey } from "./i18n/routing.js";
@@ -313,13 +314,16 @@ function closeMenuItem(item) {
 }
 
 function ContactModal({ onClose }) {
-  const { copy } = useI18n();
+  const { copy, locale } = useI18n();
   const panelRef = useRef(null);
+  const statusRef = useRef(null);
+  const [status, setStatus] = useState("idle");
 
   useEffect(() => {
     const previousFocus = document.activeElement;
     const panel = panelRef.current;
     panel.querySelector("input")?.focus();
+    prepareRecaptcha();
     const onKeyDown = (event) => {
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab") return;
@@ -341,6 +345,46 @@ function ContactModal({ onClose }) {
     };
   }, [onClose]);
 
+  useEffect(() => {
+    if (status === "sent") statusRef.current?.focus();
+  }, [status]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (status === "sending") return;
+
+    // Read the fields before the first await: React clears the event's currentTarget once it yields.
+    const fields = new FormData(event.currentTarget);
+    setStatus("sending");
+
+    const payload = {
+      name: fields.get("name") ?? "",
+      email: fields.get("email") ?? "",
+      message: fields.get("message") ?? "",
+      website: fields.get("website") ?? "",
+      locale,
+      recaptchaToken: await requestRecaptchaToken("contact"),
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`contact endpoint responded with ${response.status}`);
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   return (
     <div className="contact-backdrop" role="dialog" aria-modal="true" aria-labelledby="contact-title">
       <div className="contact-panel" ref={panelRef}>
@@ -351,22 +395,29 @@ function ContactModal({ onClose }) {
           <h2 id="contact-title">{copy.contactTitle}</h2>
           <p>{copy.contactDescription}</p>
         </div>
-        <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
-          <input type="text" placeholder={copy.name} aria-label={copy.name} autoComplete="name" />
-          <input type="email" placeholder={copy.email} aria-label={copy.email} autoComplete="email" required />
-          <textarea rows="5" placeholder={copy.message} aria-label={copy.message} />
-          <label className="contact-acceptance">
-            <input type="checkbox" required />
-            <span>{copy.privacyConsent}<a href="/live-assets/wp-content/uploads/2024/12/Policy-privacy-sito-17tons.pdf" target="_blank" rel="noreferrer">{copy.privacyPolicy}</a></span>
-          </label>
-          <button type="submit">{copy.send}</button>
-          <p className="contact-recaptcha">
-            {copy.recaptchaNotice}{" "}
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">{copy.recaptchaPrivacy}</a>
-            {" "}{copy.recaptchaConjunction}{" "}
-            <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">{copy.recaptchaTerms}</a>.
-          </p>
-        </form>
+        {status === "sent" ? (
+          <p className="contact-sent" role="status" tabIndex={-1} ref={statusRef}>{copy.contactSent}</p>
+        ) : (
+          <form className="contact-form" onSubmit={submit}>
+            <input type="text" name="name" placeholder={copy.name} aria-label={copy.name} autoComplete="name" required />
+            <input type="email" name="email" placeholder={copy.email} aria-label={copy.email} autoComplete="email" required />
+            <textarea name="message" rows="5" placeholder={copy.message} aria-label={copy.message} required />
+            {/* Left empty by people; a filled one is answered like a delivered message and discarded. */}
+            <input className="contact-honeypot" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+            {status === "error" ? <p className="contact-error" role="alert">{copy.contactError}</p> : null}
+            <label className="contact-acceptance">
+              <input type="checkbox" required />
+              <span>{copy.privacyConsent}<a href="/live-assets/wp-content/uploads/2024/12/Policy-privacy-sito-17tons.pdf" target="_blank" rel="noreferrer">{copy.privacyPolicy}</a></span>
+            </label>
+            <button type="submit" disabled={status === "sending"}>{status === "sending" ? copy.contactSending : copy.send}</button>
+            <p className="contact-recaptcha">
+              {copy.recaptchaNotice}{" "}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">{copy.recaptchaPrivacy}</a>
+              {" "}{copy.recaptchaConjunction}{" "}
+              <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">{copy.recaptchaTerms}</a>.
+            </p>
+          </form>
+        )}
       </div>
     </div>
   );

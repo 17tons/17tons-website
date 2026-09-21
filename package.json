@@ -11,6 +11,7 @@
     "test:i18n": "node tests/i18n.browser.mjs",
     "test:menus": "node tests/navigation.browser.mjs",
     "test:menus:smoke": "node tests/menus.browser.mjs",
+    "test:contact": "node tests/contact.browser.mjs",
     "snapshot": "node scripts/snapshot-live-site.mjs"
   },
   "devDependencies": {
@@ -18,6 +19,7 @@
     "vite": "8.0.16"
   },
   "dependencies": {
+    "nodemailer": "^6.10.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   }
