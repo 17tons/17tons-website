@@ -4,6 +4,10 @@ import { localizePage, updateMetadata } from "./i18n/index.js";
 import { LocaleProvider, useI18n } from "./i18n/LocaleContext.jsx";
 import { preferredLocale, resolveRoute, storageKey } from "./i18n/routing.js";
 
+// The static host has no functions of its own: the build names the contact Lambda's URL, and the
+// local preview keeps the same-origin path its tests intercept.
+const contactEndpoint = (import.meta.env && import.meta.env.VITE_CONTACT_ENDPOINT) || "/api/contact";
+
 function getPreference() {
   try {
     return preferredLocale(window.localStorage, navigator.languages);
@@ -370,7 +374,7 @@ function ContactModal({ onClose }) {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch(contactEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

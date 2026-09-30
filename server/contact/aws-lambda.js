@@ -1,5 +1,5 @@
-// AWS Lambda entry behind /api/contact. Amplify Hosting proxies the path to the function URL, and the
-// message leaves through Amazon SES under the function's own IAM role, so no mail password exists.
+// AWS Lambda entry behind the contact form's function URL. The message leaves through Amazon SES
+// under the function's own IAM role, so no mail password exists.
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { createLambdaHandler } from "./lambda.js";
 import { createContactHandler } from "./message.js";
