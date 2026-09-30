@@ -4,16 +4,14 @@ import { buildMail, contactBodyLimit, createContactHandler, validateSubmission }
 
 const newline = String.fromCharCode(13, 10);
 const env = {
-  SMTP_HOST: "smtp.private.example",
-  SMTP_USER: "sender-user",
-  SMTP_PASSWORD: "smtp-password-value",
-  SMTP_SENDER_NAME: "Sito 17tons",
-  SMTP_SENDER_EMAIL: "no-reply@17tons.earth",
+  CONTACT_SENDER_NAME: "Sito 17tons",
+  CONTACT_SENDER_EMAIL: "website@17tons.tech",
   CONTACT_RECIPIENT: "info@17tons.earth",
   RECAPTCHA_SECRET: "captcha-secret-value",
 };
 
-const secrets = [env.SMTP_HOST, env.SMTP_USER, env.SMTP_PASSWORD, env.RECAPTCHA_SECRET];
+const transportDetail = "email.us-east-1.amazonaws.com";
+const secrets = [env.RECAPTCHA_SECRET, transportDetail];
 
 const submission = {
   name: "Ada Lovelace",
@@ -25,7 +23,7 @@ const submission = {
 };
 
 function makeRequest({ method = "POST", body, stream, headers = {} } = {}) {
-  const request = { method, headers: { host: "17tons-website.vercel.app", ...headers } };
+  const request = { method, headers: { host: "17tons.earth", ...headers } };
 
   if (body !== undefined) request.body = body;
   if (stream !== undefined) {
@@ -54,11 +52,12 @@ function makeResponse() {
   };
 }
 
-function harness({ verifyCaptcha, sendMail, environment = env } = {}) {
+function harness({ verifyCaptcha, sendMail, environment = env, allowedHosts } = {}) {
   const calls = { sent: [], verified: [] };
 
   const handler = createContactHandler({
     env: environment,
+    allowedHosts,
     logger: { error() {} },
     verifyCaptcha: verifyCaptcha ?? (async (token, ip, action) => {
       calls.verified.push({ token, ip, action });
@@ -89,7 +88,7 @@ test("a valid submission reaches the recipient with a reply-to address", async (
   const [mail] = calls.sent;
   assert.equal(mail.to, env.CONTACT_RECIPIENT);
   assert.equal(mail.replyTo, submission.email);
-  assert.equal(mail.from, `"Sito 17tons" <${env.SMTP_SENDER_EMAIL}>`);
+  assert.equal(mail.from, `"Sito 17tons" <${env.CONTACT_SENDER_EMAIL}>`);
   assert.equal(mail.html, undefined, "the body must stay plain text");
   assert.match(mail.subject, /Richiesta di contatto dal sito/);
   assert.match(mail.text, /Ada Lovelace/);
@@ -158,7 +157,7 @@ test("a low captcha score is refused even when Google accepts the token", async 
 test("an unreachable captcha service is reported as such and sends nothing", async () => {
   const { handler, calls } = harness({
     verifyCaptcha: async () => {
-      throw new Error(`connect ECONNREFUSED ${env.SMTP_HOST}`);
+      throw new Error("connect ECONNREFUSED www.google.com");
     },
   });
   const response = await submit(handler);
@@ -171,7 +170,7 @@ test("an unreachable captcha service is reported as such and sends nothing", asy
 test("a send failure is generic and leaks nothing about the transport", async () => {
   const { handler } = harness({
     sendMail: async () => {
-      throw new Error(`Invalid login: 535 for ${env.SMTP_USER}`);
+      throw new Error(`MessageRejected: Email address is not verified at ${transportDetail}`);
     },
   });
   const response = await submit(handler);
@@ -184,7 +183,7 @@ test("a send failure is generic and leaks nothing about the transport", async ()
 test("missing configuration is refused instead of silently accepting mail", async () => {
   const errors = [];
   const handler = createContactHandler({
-    env: { ...env, SMTP_PASSWORD: undefined },
+    env: { ...env, CONTACT_SENDER_EMAIL: undefined },
     logger: { error: (...args) => errors.push(args.join(" ")) },
     verifyCaptcha: async () => ({ success: true, score: 0.9 }),
     sendMail: async () => {},
@@ -193,8 +192,8 @@ test("missing configuration is refused instead of silently accepting mail", asyn
 
   assert.equal(response.statusCode, 500);
   assert.deepEqual(response.json(), { ok: false, code: "not_configured" });
-  assert.match(errors.join(" "), /SMTP_PASSWORD/, "the operator needs to know which variable is missing");
-  assert.ok(!response.payload.includes("SMTP_PASSWORD"), "the visitor must not learn the configuration");
+  assert.match(errors.join(" "), /CONTACT_SENDER_EMAIL/, "the operator needs to know which variable is missing");
+  assert.ok(!response.payload.includes("CONTACT_SENDER_EMAIL"), "the visitor must not learn the configuration");
 });
 
 test("only POST from this origin is accepted", async () => {
@@ -210,6 +209,20 @@ test("only POST from this origin is accepted", async () => {
   assert.deepEqual(foreignOrigin.json(), { ok: false, code: "forbidden_origin" });
 
   assert.equal(calls.sent.length, 0);
+});
+
+test("behind a proxy only the listed site hosts are accepted", async () => {
+  const { handler, calls } = harness({ allowedHosts: ["17tons.earth", "www.17tons.earth"] });
+  const proxied = { host: "abc123.lambda-url.eu-central-1.on.aws" };
+
+  const listed = await submit(handler, makeRequest({ body: submission, headers: { ...proxied, origin: "https://www.17tons.earth" } }));
+  assert.equal(listed.statusCode, 200);
+
+  const unlisted = await submit(handler, makeRequest({ body: submission, headers: { ...proxied, origin: "https://abc123.lambda-url.eu-central-1.on.aws" } }));
+  assert.equal(unlisted.statusCode, 403);
+  assert.deepEqual(unlisted.json(), { ok: false, code: "forbidden_origin" });
+
+  assert.equal(calls.sent.length, 1);
 });
 
 test("a body over the limit and a malformed body are both refused", async () => {

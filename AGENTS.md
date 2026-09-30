@@ -20,18 +20,18 @@
 - The catalogue is keyed by source text, so a string the snapshot shares across two elements cannot carry two translations. `src/i18n/overrides.js` maps per-widget overrides by Elementor `data-id`, resolved before the catalogue; add an entry only for a real collision and keep the catalogue value for the other element.
 - Localization also repairs snapshot link defects: the reCAPTCHA policy links captured as `#` are restored to the Google URLs, and `target` is removed from contact-page links so every trigger opens the in-app dialog instead of a new tab.
 - Keep the `dangerouslySetInnerHTML` value memoized with its source HTML. Unrelated state changes, especially the contact dialog, must not replace the snapshot DOM and discard menu listeners or initialized marquees.
-- The contact dialog posts to the Vercel function `api/contact.js`, which sends through the SMTP account held in the project's environment variables. `server/contact/message.js` carries the tested honeypot, validation, captcha and message logic; keep transport code out of it and out of the endpoint.
-- The endpoint answers `500 not_configured` when a required variable is missing, so do not describe message delivery as working until the variables are set in the Vercel project. `README.md` lists them; never commit or print a value.
-- `vercel.json` rewrites all routes to `/index.html` so direct deep links work on Vercel. Vercel resolves the filesystem, `api/` functions included, before applying that rewrite.
-- Vercel project: `sebastiano-6026s-projects/17tons-website`.
-- This website deploys `main` to Vercel Production at `https://17tons-website.vercel.app/`; feature branches create separate, authenticated Preview deployments. A successful Preview does not update the public domain. Publish through a pull request into `main` only when the public deployment is authorized.
-- Vercel must be able to associate the commit author with the connected GitHub account. Verify the deployment result separately from push success, and keep any author-email configuration scoped to this repository.
+- The contact dialog posts to the Lambda `17tons-website-contact` (`server/contact/aws-lambda.js`, `eu-central-1`) through its function URL (`VITE_CONTACT_ENDPOINT` at build time; `/api/contact` when unset, for the intercepted tests). The Lambda sends through Amazon SES under its IAM role. `server/contact/message.js` carries the tested honeypot, validation, captcha and message logic; keep transport code out of it. `server/contact/lambda.js` adapts function URL events and must stay runtime-free.
+- The origin check relies on `CONTACT_ALLOWED_HOSTS`, and the function URL's CORS allows the same origins. Add every host the site is served from to both, and to the reCAPTCHA key's domains.
+- The endpoint answers `500 not_configured` when a required variable is missing. `README.md` lists the variables; never commit or print a value.
+- Hosting: GitHub Pages at `https://www.17tons.earth`, deployed by `.github/workflows/pages.yml` from `main`. Pages has no rewrites, so `scripts/write-route-pages.mjs` writes an `index.html` for every route and a `404.html`; add a new route to `src/generated/pages.js` or the script, never a rewrite.
+- DNS stays at Netsons, which has no ALIAS/ANAME records: `www` is a CNAME to `17tons.github.io`, and the apex has the four GitHub Pages A records, which Pages redirects to `www`. Never touch the Microsoft 365 mail records.
+- The Lambda is deployed separately with `scripts/package-contact-lambda.sh` and `aws lambda update-function-code`. Publish the site through a pull request into `main` only when the public deployment is authorized, and verify the Pages deployment and the live page separately from a green workflow.
 
 ## Verification
 - Run `npm run build` after changes.
 - Run `npm test` for locale/routing changes and `npm run test:i18n` against the running site for translation coverage and desktop/mobile browser checks. See `README.md` for production-preview verification.
 - For routing or visual changes, verify with browser automation on desktop and mobile viewports.
-- For contact-dialog or endpoint changes, run `npm run test:contact`, which drives the built site with `/api/contact` intercepted, and `npm test` for the handler's own tests. The preview server is static, so only `vercel dev` exercises the real SMTP path.
+- For contact-dialog or endpoint changes, run `npm run test:contact`, which drives the built site with `/api/contact` intercepted, and `npm test` for the handler's own tests. The preview server is static; the real SES path is exercised only from the deployed site.
 - For header navigation changes, run `npm run test:menus` to verify real pointer travel into dropdowns, all submenu links, and keyboard dismissal. Preserve a continuous hoverable area between each trigger and its panel.
 - The full menu suite covers all six source pages in both languages, contact-dialog lifecycle, history, current-page selection, language switching, the home logo and an intercepted LinkedIn destination. Run with `BROWSER=webkit` on a supported platform for WebKit coverage; `test:menus:smoke` is not a substitute for the full suite.
-- Keep `dist/`, `.vercel/`, logs, and local test artifacts out of git.
+- Keep `dist/`, `build/`, logs, and local test artifacts out of git.

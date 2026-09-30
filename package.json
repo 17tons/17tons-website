@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build && node scripts/sanitize-build-urls.mjs",
+    "build": "vite build && node scripts/sanitize-build-urls.mjs && node scripts/write-route-pages.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.test.mjs",
     "test:i18n": "node tests/i18n.browser.mjs",
@@ -15,11 +15,11 @@
     "snapshot": "node scripts/snapshot-live-site.mjs"
   },
   "devDependencies": {
+    "@aws-sdk/client-sesv2": "^3.1143.0",
     "playwright": "1.62.1",
     "vite": "8.0.16"
   },
   "dependencies": {
-    "nodemailer": "^6.10.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   }

@@ -43,24 +43,27 @@ The full menu regression suite starts from every page in both languages and foll
 
 Use `npm run test:menus -- --breakpoints-only` for the responsive checks, `--links-only` for the navigation/lifecycle checks, or `--mobile-only` to limit the navigation graph to the mobile layout while retaining all responsive checks.
 
-The contact form posts to the Vercel function in `api/contact.js`, which delivers the message to the address in `CONTACT_RECIPIENT` through the SMTP account configured in the project's environment variables. `npm run test:contact` exercises the dialog against the built site with the endpoint intercepted, because the preview server used above is static and does not execute functions. To exercise the real handler locally, run `vercel dev` with the variables pulled into the environment.
+The contact form posts to the AWS Lambda `17tons-website-contact` (`server/contact/aws-lambda.js`) through its function URL, which the build receives as `VITE_CONTACT_ENDPOINT`. The Lambda sends the message to `CONTACT_RECIPIENT` through Amazon SES under its own IAM role, so no mail password exists anywhere. Without `VITE_CONTACT_ENDPOINT` the dialog posts to the same-origin `/api/contact`, which is what `npm run test:contact` intercepts, because the preview server used above is static. `npm test` covers the handler and the Lambda adapter.
 
 ## Configuration
 
-The deployment reads these Vercel project environment variables. Set them for both Production and Preview; the build-time key must be present when the site is built.
+The Lambda (`eu-central-1`) reads these environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | SMTP account the message is sent through; the port defaults to 587 and `SMTP_SECURE` to `false` |
-| `SMTP_USER`, `SMTP_PASSWORD` | Credentials for that account |
-| `SMTP_SENDER_NAME`, `SMTP_SENDER_EMAIL` | The sender the recipient sees; `SMTP_SENDER_EMAIL` must be allowed by the mail account |
+| `CONTACT_SENDER_EMAIL`, `CONTACT_SENDER_NAME` | The sender the recipient sees; the address must belong to a verified SES identity (`17tons.tech`) |
 | `CONTACT_RECIPIENT` | Address the messages are delivered to |
+| `CONTACT_ALLOWED_HOSTS` | Comma-separated hosts the form may be posted from (`17tons.earth,www.17tons.earth`) |
+| `SES_REGION` | Region of the SES identity (`us-east-1`) |
 | `RECAPTCHA_SECRET` | Server-side reCAPTCHA secret, never exposed to the browser |
 | `RECAPTCHA_MIN_SCORE` | Optional score threshold, defaults to `0.5` |
-| `VITE_RECAPTCHA_SITE_KEY` | Public reCAPTCHA site key, inlined into the build; must list every domain the site is served from |
 
-The endpoint answers `500` with `not_configured` rather than accepting a message it cannot deliver, so a deployment missing any of these variables fails loudly instead of losing enquiries.
+The function URL allows cross-origin `POST` only from `https://www.17tons.earth` and `https://17tons.earth`. The endpoint answers `500` with `not_configured` rather than accepting a message it cannot deliver.
+
+The build reads `VITE_RECAPTCHA_SITE_KEY`, the public reCAPTCHA site key, and `VITE_CONTACT_ENDPOINT`, the Lambda's function URL. The deploy workflow sets both. The reCAPTCHA key must list every domain the site is served from.
 
 ## Deployment
 
-`npm run build` writes the static site to `dist/`, and every file under `api/` becomes a serverless function. Vercel resolves the filesystem, serverless functions included, before applying rewrites, so `vercel.json` rewriting deep links to `index.html` does not shadow the endpoint.
+- The site is served by GitHub Pages at `https://www.17tons.earth`. `.github/workflows/pages.yml` tests and builds every push and pull request, and deploys `main`. `npm run build` also writes an `index.html` for every known route (`scripts/write-route-pages.mjs`), so direct links answer `200`, plus a `404.html` that lets the app render unknown routes.
+- DNS for `17tons.earth` stays at Netsons: `www` is a CNAME to `17tons.github.io`, and the apex has A records to GitHub Pages (`185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`), which redirects it to `www`. The mail records (Microsoft 365) are unrelated to the site and must stay untouched.
+- The contact Lambda is deployed on its own. `scripts/package-contact-lambda.sh` builds `build/contact-lambda.zip`; the AWS SDK comes with the Node.js 22 runtime. Publish it with `aws lambda update-function-code --function-name 17tons-website-contact --zip-file fileb://build/contact-lambda.zip --region eu-central-1`.
