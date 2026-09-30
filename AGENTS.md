@@ -4,6 +4,8 @@
 - This repository is a React/Vite recreation of `https://17tons.earth`.
 - The app renders captured Elementor page markup from `src/generated/pages.js` through React.
 - Runtime assets are local under `public/live-assets/`; do not introduce external asset references unless explicitly requested.
+- `DESIGN.md` holds the colors, fonts, spacing, component styles and icon rules. Read it before any UI change and add new patterns to it.
+- The favicons in `public/` (`favicon.ico`, `favicon-32x32.png`, `icon-192.png`, `apple-touch-icon.png`) are cut from the logo's two-coin mark and linked from `index.html`; regenerate them from the logo if it changes.
 - English and Italian translations are maintained under `src/i18n/`. Keep translations outside generated snapshot files and run the translation coverage check after snapshot regeneration.
 
 ## Snapshot Flow
