@@ -20,18 +20,17 @@
 - The catalogue is keyed by source text, so a string the snapshot shares across two elements cannot carry two translations. `src/i18n/overrides.js` maps per-widget overrides by Elementor `data-id`, resolved before the catalogue; add an entry only for a real collision and keep the catalogue value for the other element.
 - Localization also repairs snapshot link defects: the reCAPTCHA policy links captured as `#` are restored to the Google URLs, and `target` is removed from contact-page links so every trigger opens the in-app dialog instead of a new tab.
 - Keep the `dangerouslySetInnerHTML` value memoized with its source HTML. Unrelated state changes, especially the contact dialog, must not replace the snapshot DOM and discard menu listeners or initialized marquees.
-- The contact dialog posts to the Vercel function `api/contact.js`, which sends through the SMTP account held in the project's environment variables. `server/contact/message.js` carries the tested honeypot, validation, captcha and message logic; keep transport code out of it and out of the endpoint.
-- The endpoint answers `500 not_configured` when a required variable is missing, so do not describe message delivery as working until the variables are set in the Vercel project. `README.md` lists them; never commit or print a value.
-- `vercel.json` rewrites all routes to `/index.html` so direct deep links work on Vercel. Vercel resolves the filesystem, `api/` functions included, before applying that rewrite.
-- Vercel project: `sebastiano-6026s-projects/17tons-website`.
-- This website deploys `main` to Vercel Production at `https://17tons-website.vercel.app/`; feature branches create separate, authenticated Preview deployments. A successful Preview does not update the public domain. Publish through a pull request into `main` only when the public deployment is authorized.
-- Vercel must be able to associate the commit author with the connected GitHub account. Verify the deployment result separately from push success, and keep any author-email configuration scoped to this repository.
+- The contact dialog posts to `/api/contact`. Amplify Hosting proxies it to the Lambda `17tons-website-contact` (`server/contact/aws-lambda.js`), which sends through Amazon SES under its IAM role. `server/contact/message.js` carries the tested honeypot, validation, captcha and message logic; keep transport code out of it. `server/contact/lambda.js` adapts function URL events and must stay runtime-free.
+- Behind the proxy the request host is the Lambda's, so the origin check relies on `CONTACT_ALLOWED_HOSTS`. Add every host the site is served from to that variable and to the reCAPTCHA key's domains.
+- The endpoint answers `500 not_configured` when a required variable is missing. `README.md` lists the variables; never commit or print a value.
+- Hosting: 17tons AWS account `832426295223`, Amplify app `dyohydngf32c` in `eu-central-1` (`main` is production at `https://main.dyohydngf32c.amplifyapp.com/`, `preview` holds pull request builds). The app's rewrite rules proxy `/api/contact` and send extensionless paths to `/index.html`.
+- `.github/workflows/deploy.yml` deploys through GitHub OIDC roles: `17tons-website-deploy` for `main` (site and Lambda) and `17tons-website-preview` for pull requests (the `preview` branch only). Publish through a pull request into `main` only when the public deployment is authorized, and verify the Amplify job and the live page separately from a green workflow.
 
 ## Verification
 - Run `npm run build` after changes.
 - Run `npm test` for locale/routing changes and `npm run test:i18n` against the running site for translation coverage and desktop/mobile browser checks. See `README.md` for production-preview verification.
 - For routing or visual changes, verify with browser automation on desktop and mobile viewports.
-- For contact-dialog or endpoint changes, run `npm run test:contact`, which drives the built site with `/api/contact` intercepted, and `npm test` for the handler's own tests. The preview server is static, so only `vercel dev` exercises the real SMTP path.
+- For contact-dialog or endpoint changes, run `npm run test:contact`, which drives the built site with `/api/contact` intercepted, and `npm test` for the handler's own tests. The preview server is static; the real SES path is exercised only against a deployed Amplify branch.
 - For header navigation changes, run `npm run test:menus` to verify real pointer travel into dropdowns, all submenu links, and keyboard dismissal. Preserve a continuous hoverable area between each trigger and its panel.
 - The full menu suite covers all six source pages in both languages, contact-dialog lifecycle, history, current-page selection, language switching, the home logo and an intercepted LinkedIn destination. Run with `BROWSER=webkit` on a supported platform for WebKit coverage; `test:menus:smoke` is not a substitute for the full suite.
-- Keep `dist/`, `.vercel/`, logs, and local test artifacts out of git.
+- Keep `dist/`, `build/`, logs, and local test artifacts out of git.

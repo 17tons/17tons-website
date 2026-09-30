@@ -15,11 +15,11 @@
     "snapshot": "node scripts/snapshot-live-site.mjs"
   },
   "devDependencies": {
+    "@aws-sdk/client-sesv2": "^3.1143.0",
     "playwright": "1.62.1",
     "vite": "8.0.16"
   },
   "dependencies": {
-    "nodemailer": "^6.10.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   }

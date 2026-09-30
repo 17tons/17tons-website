@@ -1,19 +1,12 @@
-// Contact-form logic behind api/contact.js.
+// Contact-form logic behind the AWS Lambda in server/contact/aws-lambda.js.
 //
-// The SMTP transport and the captcha service are injected, so this module performs no network
-// access of its own and the Vercel function in api/ stays a thin wrapper around it.
+// The mail transport and the captcha service are injected, so this module performs no network
+// access of its own and the Lambda entry stays a thin wrapper around it.
 
 export const contactLimits = Object.freeze({ name: 200, email: 254, message: 5000 });
 export const contactLocales = Object.freeze(["en", "it"]);
 export const contactBodyLimit = 20 * 1024;
-export const contactRequiredEnv = Object.freeze([
-  "SMTP_HOST",
-  "SMTP_USER",
-  "SMTP_PASSWORD",
-  "SMTP_SENDER_EMAIL",
-  "CONTACT_RECIPIENT",
-  "RECAPTCHA_SECRET",
-]);
+export const contactRequiredEnv = Object.freeze(["CONTACT_SENDER_EMAIL", "CONTACT_RECIPIENT", "RECAPTCHA_SECRET"]);
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -59,7 +52,8 @@ function requestHost(req) {
 
 // Browsers send Origin on every POST, same-origin included, so a mismatch is always a foreign page.
 // A request without the header is not a browser submission; the captcha still applies to it.
-function isSameOrigin(req) {
+// Behind a proxy the request host is the function's own, so the site's hosts are listed instead.
+function isSameOrigin(req, allowedHosts) {
   const origin = req.headers?.origin;
   if (!origin) return true;
 
@@ -69,6 +63,8 @@ function isSameOrigin(req) {
   } catch {
     return false;
   }
+
+  if (allowedHosts.length > 0) return allowedHosts.includes(host);
 
   const expected = requestHost(req);
   return expected.length > 0 && host === expected;
@@ -89,7 +85,7 @@ async function readPayload(req) {
   const body = req.body;
 
   if (body !== undefined && body !== null) {
-    // Vercel parses a JSON request body before the handler runs.
+    // Some runtimes parse a JSON request body before the handler runs.
     if (typeof body === "object") return { kind: "ok", value: body };
     if (typeof body !== "string") return { kind: "invalid" };
     if (body.length > contactBodyLimit) return { kind: "too_large" };
@@ -165,10 +161,10 @@ export function buildMail(submission, config) {
   };
 }
 
-export function createContactHandler({ env, sendMail, verifyCaptcha, logger = console }) {
+export function createContactHandler({ env, sendMail, verifyCaptcha, allowedHosts = [], logger = console }) {
   return async function contactHandler(req, res) {
     if (req.method !== "POST") return respond(res, 405, { ok: false, code: "method_not_allowed" });
-    if (!isSameOrigin(req)) return respond(res, 403, { ok: false, code: "forbidden_origin" });
+    if (!isSameOrigin(req, allowedHosts)) return respond(res, 403, { ok: false, code: "forbidden_origin" });
 
     const missing = contactRequiredEnv.filter((name) => !env[name]);
     if (missing.length > 0) {
@@ -204,8 +200,8 @@ export function createContactHandler({ env, sendMail, verifyCaptcha, logger = co
 
     const config = {
       recipient: env.CONTACT_RECIPIENT,
-      fromName: env.SMTP_SENDER_NAME ?? "",
-      fromAddress: env.SMTP_SENDER_EMAIL,
+      fromName: env.CONTACT_SENDER_NAME ?? "",
+      fromAddress: env.CONTACT_SENDER_EMAIL,
     };
 
     try {

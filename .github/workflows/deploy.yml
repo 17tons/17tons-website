@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.event_name == 'push' && 'main' || 'preview' }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-central-1
+  AMPLIFY_APP_ID: dyohydngf32c
+  CONTACT_LAMBDA: 17tons-website-contact
+  VITE_RECAPTCHA_SITE_KEY: 6LfK09UtAAAAAGt-L7Gs9gnCSp2uyseLB5RM0QNc
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: ./scripts/package-contact-lambda.sh
+
+      - name: Choose the target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "branch=main" >> "$GITHUB_OUTPUT"
+            echo "role=arn:aws:iam::832426295223:role/17tons-website-deploy" >> "$GITHUB_OUTPUT"
+          else
+            echo "branch=preview" >> "$GITHUB_OUTPUT"
+            echo "role=arn:aws:iam::832426295223:role/17tons-website-preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.target.outputs.role }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy the contact Lambda
+        if: github.event_name == 'push'
+        run: |
+          aws lambda update-function-code --function-name "$CONTACT_LAMBDA" --zip-file fileb://build/contact-lambda.zip --query LastUpdateStatus --output text
+          aws lambda wait function-updated-v2 --function-name "$CONTACT_LAMBDA"
+
+      - name: Publish the site
+        run: ./scripts/deploy-amplify.sh "${{ steps.target.outputs.branch }}"

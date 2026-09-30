@@ -43,24 +43,29 @@ The full menu regression suite starts from every page in both languages and foll
 
 Use `npm run test:menus -- --breakpoints-only` for the responsive checks, `--links-only` for the navigation/lifecycle checks, or `--mobile-only` to limit the navigation graph to the mobile layout while retaining all responsive checks.
 
-The contact form posts to the Vercel function in `api/contact.js`, which delivers the message to the address in `CONTACT_RECIPIENT` through the SMTP account configured in the project's environment variables. `npm run test:contact` exercises the dialog against the built site with the endpoint intercepted, because the preview server used above is static and does not execute functions. To exercise the real handler locally, run `vercel dev` with the variables pulled into the environment.
+The contact form posts to `/api/contact`, which Amplify Hosting proxies to the AWS Lambda in `server/contact/aws-lambda.js`. The Lambda sends the message to `CONTACT_RECIPIENT` through Amazon SES under its own IAM role, so no mail password exists anywhere. `npm run test:contact` exercises the dialog against the built site with the endpoint intercepted, because the preview server used above is static and does not execute functions. `npm test` covers the handler and the Lambda adapter.
 
 ## Configuration
 
-The deployment reads these Vercel project environment variables. Set them for both Production and Preview; the build-time key must be present when the site is built.
+The Lambda `17tons-website-contact` (`eu-central-1`) reads these environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | SMTP account the message is sent through; the port defaults to 587 and `SMTP_SECURE` to `false` |
-| `SMTP_USER`, `SMTP_PASSWORD` | Credentials for that account |
-| `SMTP_SENDER_NAME`, `SMTP_SENDER_EMAIL` | The sender the recipient sees; `SMTP_SENDER_EMAIL` must be allowed by the mail account |
+| `CONTACT_SENDER_EMAIL`, `CONTACT_SENDER_NAME` | The sender the recipient sees; the address must belong to a verified SES identity (`17tons.tech`) |
 | `CONTACT_RECIPIENT` | Address the messages are delivered to |
+| `CONTACT_ALLOWED_HOSTS` | Comma-separated hosts the form may be posted from; behind the proxy the request host is the function's own, so the site's hosts are listed |
+| `SES_REGION` | Region of the SES identity (`us-east-1`) |
 | `RECAPTCHA_SECRET` | Server-side reCAPTCHA secret, never exposed to the browser |
 | `RECAPTCHA_MIN_SCORE` | Optional score threshold, defaults to `0.5` |
-| `VITE_RECAPTCHA_SITE_KEY` | Public reCAPTCHA site key, inlined into the build; must list every domain the site is served from |
 
-The endpoint answers `500` with `not_configured` rather than accepting a message it cannot deliver, so a deployment missing any of these variables fails loudly instead of losing enquiries.
+`VITE_RECAPTCHA_SITE_KEY` is the public reCAPTCHA site key, inlined into the build by the deploy workflow. The key must list every domain the site is served from.
+
+The endpoint answers `500` with `not_configured` rather than accepting a message it cannot deliver, so a Lambda missing any required variable fails loudly instead of losing enquiries.
 
 ## Deployment
 
-`npm run build` writes the static site to `dist/`, and every file under `api/` becomes a serverless function. Vercel resolves the filesystem, serverless functions included, before applying rewrites, so `vercel.json` rewriting deep links to `index.html` does not shadow the endpoint.
+The site runs on the 17tons AWS account (`832426295223`), without servers:
+
+- Amplify Hosting app `17tons-website` (`dyohydngf32c`, `eu-central-1`) serves `dist/` as manual deployments. Branch `main` is production, and branch `preview` receives pull request builds. The app's rewrite rules proxy `/api/contact` to the Lambda function URL and send every path without a file extension to `/index.html`, so direct deep links work.
+- Lambda `17tons-website-contact` runs `server/contact/aws-lambda.js` on Node.js 22. `scripts/package-contact-lambda.sh` builds its archive; the AWS SDK comes with the runtime.
+- `.github/workflows/deploy.yml` tests and builds every push and pull request. It signs in to AWS through GitHub OIDC, with no stored keys. A push to `main` deploys the Lambda and publishes `main`, while a pull request publishes only `preview`. `scripts/deploy-amplify.sh` uploads the build and waits for the Amplify job.

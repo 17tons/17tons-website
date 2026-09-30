@@ -2,7 +2,7 @@
 //
 // The snapshot deliberately carries no third-party scripts, so the Google script is never loaded for
 // a visitor who does not open the dialog. The site key is public by design; the secret lives only in
-// the Vercel environment.
+// the contact Lambda's environment.
 
 const siteKey = (import.meta.env && import.meta.env.VITE_RECAPTCHA_SITE_KEY) || "";
 const scriptId = "contact-recaptcha";
