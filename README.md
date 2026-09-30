@@ -34,6 +34,7 @@ In another terminal, with Google Chrome installed:
 ```sh
 BASE_URL=http://127.0.0.1:4174 npm run test:i18n
 BASE_URL=http://127.0.0.1:4174 npm run test:menus
+BASE_URL=http://127.0.0.1:4174 npm run test:contact
 ```
 
 The Playwright suite verifies the complete translation catalog, all six pages in both languages at desktop and mobile widths, localized metadata, internal links, direct URLs, language switching, history, reload, stored/browser preference, blocked storage, the contact dialog, mobile navigation and unknown routes. It saves screenshots under `/tmp/17tons-i18n-screenshots`; set `SCREENSHOT_DIR` to choose another output directory outside version control.
@@ -42,8 +43,24 @@ The full menu regression suite starts from every page in both languages and foll
 
 Use `npm run test:menus -- --breakpoints-only` for the responsive checks, `--links-only` for the navigation/lifecycle checks, or `--mobile-only` to limit the navigation graph to the mobile layout while retaining all responsive checks.
 
-The contact form retains the original site's frontend-only submission behavior. Adding message delivery requires a separate integration.
+The contact form posts to the Vercel function in `api/contact.js`, which delivers the message to the address in `CONTACT_RECIPIENT` through the SMTP account configured in the project's environment variables. `npm run test:contact` exercises the dialog against the built site with the endpoint intercepted, because the preview server used above is static and does not execute functions. To exercise the real handler locally, run `vercel dev` with the variables pulled into the environment.
+
+## Configuration
+
+The deployment reads these Vercel project environment variables. Set them for both Production and Preview; the build-time key must be present when the site is built.
+
+| Variable | Purpose |
+| --- | --- |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` | SMTP account the message is sent through; the port defaults to 587 and `SMTP_SECURE` to `false` |
+| `SMTP_USER`, `SMTP_PASSWORD` | Credentials for that account |
+| `SMTP_SENDER_NAME`, `SMTP_SENDER_EMAIL` | The sender the recipient sees; `SMTP_SENDER_EMAIL` must be allowed by the mail account |
+| `CONTACT_RECIPIENT` | Address the messages are delivered to |
+| `RECAPTCHA_SECRET` | Server-side reCAPTCHA secret, never exposed to the browser |
+| `RECAPTCHA_MIN_SCORE` | Optional score threshold, defaults to `0.5` |
+| `VITE_RECAPTCHA_SITE_KEY` | Public reCAPTCHA site key, inlined into the build; must list every domain the site is served from |
+
+The endpoint answers `500` with `not_configured` rather than accepting a message it cannot deliver, so a deployment missing any of these variables fails loudly instead of losing enquiries.
 
 ## Deployment
 
-`npm run build` writes the static site to `dist/`. `vercel.json` rewrites deep links to `index.html` so localized and legacy URLs work on direct visits.
+`npm run build` writes the static site to `dist/`, and every file under `api/` becomes a serverless function. Vercel resolves the filesystem, serverless functions included, before applying rewrites, so `vercel.json` rewriting deep links to `index.html` does not shadow the endpoint.

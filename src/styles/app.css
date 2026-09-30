@@ -580,6 +580,32 @@
   text-decoration: underline;
 }
 
+/* Kept in the form so a bot fills it, but out of the layout and out of the accessibility tree. */
+.contact-form input.contact-honeypot {
+  border: 0;
+  height: 1px;
+  left: -9999px;
+  min-height: 0;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.contact-error,
+.contact-sent {
+  line-height: 1.5;
+  margin: 0;
+}
+
+.contact-error {
+  color: #8a1c14;
+  font-size: 13px;
+}
+
+.contact-sent {
+  font-size: 16px;
+}
+
 .contact-label {
   height: auto;
   max-width: 100%;

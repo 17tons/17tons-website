@@ -13,6 +13,10 @@ export const messages = {
     privacyConsent: "I confirm that I have read and agree to the ",
     privacyPolicy: "Privacy Policy",
     send: "Send Your Message",
+    // Delivery states of the contact dialog.
+    contactSending: "Sending…",
+    contactSent: "Thank you — your message has been sent. The 17tons team will get back to you as soon as possible.",
+    contactError: "Your message could not be sent. Please try again, or write to info@17tons.earth.",
     // The same notice the footer already carries, worded identically so the two agree.
     recaptchaNotice: "This site is protected by reCAPTCHA and Google:",
     recaptchaPrivacy: "privacy policy",
@@ -51,6 +55,10 @@ export const messages = {
     privacyConsent: "Confermo di aver letto e di accettare l’", // no trailing space: the apostrophe elides it
     privacyPolicy: "informativa sulla privacy",
     send: "Invia il messaggio",
+    // Delivery states of the contact dialog.
+    contactSending: "Invio in corso…",
+    contactSent: "Grazie, il messaggio è stato inviato. Il team di 17tons ti risponderà il prima possibile.",
+    contactError: "Non è stato possibile inviare il messaggio. Riprova, oppure scrivi a info@17tons.earth.",
     // The same notice the footer already carries, worded identically so the two agree.
     recaptchaNotice: "Questo sito è protetto da reCAPTCHA e si applicano le norme di Google:",
     recaptchaPrivacy: "informativa sulla privacy",
